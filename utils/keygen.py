@@ -1,9 +1,9 @@
-# 
+#
 # Generate a Python Cryptograpic Key File
 #
-# 
 #
-# 
+#
+#
 import sys
 import os
 from getopt import getopt
@@ -19,16 +19,16 @@ def write_message(message, level="info"):
    """ Write a message to the console """
    WARNING = "\033[33mWARNING\033[0m" # \___ Linux-specific colorization
    ERROR   = "\033[31mERROR\033[0m"   # /
-   if level   == "info": 
+   if level   == "info":
       sys.stdout.write(f"{message}\n")
       sys.stdout.flush()
-   elif level == "warning": 
+   elif level == "warning":
       sys.stderr.write(f"{WARNING} -- {message}\n")
       sys.stderr.flush()
-   elif level == "error": 
+   elif level == "error":
       sys.stderr.write(f"{ERROR} -- {message}\n")
       sys.stderr.flush()
-   else: 
+   else:
       sys.stdout.write(f"{message}\n")
       sys.stdout.flush()
 
@@ -84,13 +84,13 @@ except Exception as e:
 
 # Check for an optional key file name
 if not sys.argv[-1].startswith('-') and len(sys.argv) > 1:
-   KEY_FILE = sys.argv[-1] 
+   KEY_FILE = sys.argv[-1]
 
 try:
    from cryptography.fernet import Fernet
 except ImportError:
-   m = "Missing Cryptography Library\nTry: pip install cryptography" 
-   write_message(m, "error")    
+   m = "Missing Cryptography Library\nTry: pip install cryptography"
+   write_message(m, "error")
    sys.exit(3)
 
 
@@ -104,7 +104,7 @@ try:
    if VERBOSE: write_message(f"   -- Writing key file {KEY_FILE}  ...")
    with open(KEY_FILE, 'wb') as filekey: filekey.write(key)
 except Exception as e:
-   m = f"Unable to write key to file: {KEY_FILE}" 
+   m = f"Unable to write key to file: {KEY_FILE}"
    write_message(m, "error")
    sys.exit(4)
 
@@ -149,8 +149,8 @@ if decrypted_string == test_string:
    if VERBOSE: write_message(f"   -- Successfully verified key file '{KEY_FILE}'")
    exit_code = 0
 else:
-   m = f"Key file '{KEY_FILE}' FAILED validation, removing filels." 
-   write_message(m, "error")  
+   m = f"Key file '{KEY_FILE}' FAILED validation, removing filels."
+   write_message(m, "error")
    os.remove(KEY_FILE)
    exit_code = 2
 
