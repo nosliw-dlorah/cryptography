@@ -1,9 +1,18 @@
 #
-# Encrypr or decrypt a file using a cryptographic key
+# Encrypr or decrypt a file using a cryptographic key.
+# -- H. Wilson, July 2022
 #
+# Please see keygen.py for generating a cryptographic key file.
 #
-#
-#
+# Cryptographic Specificastions:
+# According to https://cryptography.io/en/latest/fernet/#limitations 
+# Standard cryptographic primitives in use are:
+#  AES in CBC mode with a 128-bit key for encryption; using PKCS7 padding.
+#  HMAC using SHA256 for authentication.
+#  Initialization vectors are generated using os.urandom().
+# 
+# TODO: Futuire version -- implement MultiFernet([key1, key2]) option 
+
 import sys
 import os
 from getopt import getopt
@@ -46,7 +55,7 @@ def usage():
    print("Decrypted reuslts are sent to Standard Out that you may redirect to a file.")
    print(f"Encrypted results are saved directly to a file with the extension .{EXTENSION}")
    print(" ")
-   print(f"USAGE: {ME} [OPTIONS] KEY_FILE SOURCE_FILE")
+   print(f"USAGE: {ME}  [OPTIONS]  KEY_FILE  SOURCE_FILE")
    print(" ")
    print("OPTIONS: ")
    print("   -h --help      Display this message. ")
@@ -54,31 +63,34 @@ def usage():
    print("   -d --debug     Runs the program in debug mode (implies verbose). ")
    print("   -e --encrypt   Used to encrypt a file, default operation is to decrypt")
    print(" ")
-   print("ARGUMENTS: ")
+   print("REQUIRED ARGUMENTS: ")
    print("   KEY_FILE      The file that holds the cytptographic key")
    print("   SOURCE_FILE   The source file to be eitehr encrypted or decrypted with the key")
    print(" ")
    print("EXIT CODES: ")
-   print("    0 - Successful completion of the program, all tests passed. ")
+   print("    0 - Successful completion of the program. ")
    print("    1 - Bad or missing command line arguments. ")
-   print("    2 - Generated key file FAILED validation, key file removed")
+   print("    2 - Reserved, not used.")
    print("    3 - Missing required 'cryptography' library" )
    print("    4 - Unable to loacate cryptographic key file")
    print("    5 - Unable to read or invalid cryptographic key to file")   
    print("    6 - Unable to loacate source file")   
    print("    7 - Unable to read source file")   
-   print("    8 - Unable write encrpyted file")   
+   print("    8 - Unable write encrpyted file") 
+   print("    9 - Unable decrypt encrpyted file with the key provided") 
    print(" ")
    print("EXAMPLES: ")
    print("   1.) Decrypt a file with a key and save the results to secrets.txt")
    print(f"   {ME} key_file.dat secrets.dat > secrets.txt")
    print(" ")
-   print("   2.) Encrypt a text file using a key and save to encrypted file secrets.dat")
+   print(f"   2.) Encrypt a text file using a key and save to encrypted file secrets.txt.{EXTENSION}")
    print(f"   {ME} --encrypt key_file.dat secrets.txt")
    print(f"   {ME} -e key_file.dat secrets.txt")
    print(" ") 
 
-# Parse and Process the command line options
+# Parse and process the command line options and arguments.
+# I know the kids today are using argparse, but I like having 
+# the help message readable in the source code. --HMW 
 try:
    arguments = getopt(sys.argv[1:],'hvde',['help','verbose','debug', 'encrypt'])
    # --- Check for a help option
@@ -106,21 +118,23 @@ try:
       SOURCE_FILE = sys.argv[-1]
       KEY_FILE = sys.argv[-2]   
 except Exception as e:
-    write_message(f"Bad or missing command line option(s) and/or arguments\n         {str(e)}\n\n", 'error')
+    write_message(f"Bad or missing command line option(s) and/or argument(s)\n         {str(e)}\n\n", 'error')
     usage()
     sys.exit(1)
 
 # Check the source file exists
+# Доверяй, но проверяй
 if os.path.isfile(SOURCE_FILE):
    if VERBOSE: 
       m = f"   -- Found source file {SOURCE_FILE}" 
       write_message(m)
 else:    
-   m = f"Unable to locate supplied source file {SOURCE_FILE}"
+   m = f"Unable to locate source file {SOURCE_FILE}"
    write_message(m, 'error')
    sys.exit(6)
 
 # Check the key file exists
+# Доверяй, но проверяй
 if os.path.isfile(KEY_FILE):
    if VERBOSE: 
       m = f"   -- Found cryptographic key file {KEY_FILE}" 
@@ -131,6 +145,9 @@ else:
    sys.exit(4)
 
 # Try to import the Cryptographic library
+#    This import is here in the middle of the code so that 
+#    users may access the help/usage message even if the 
+#    cryptographic library is not installed on hte system. 
 try:
    import cryptography 
    from cryptography.fernet import Fernet
@@ -141,10 +158,11 @@ except ImportError:
    write_message(m, "error")
    sys.exit(3)
 
-# Verify key file and initialize cryptographic component
+# Verify key file and initialize the cryptographic component
+# Доверяй, но проверяй
 try: 
    with open(KEY_FILE, 'rb') as filekey: crypto_key = filekey.read()
-   fernet = Fernet(crypto_key)
+   cryptographic_component = Fernet(crypto_key)
    if VERBOSE: write_message(f"   -- Valid key file '{KEY_FILE}'")
 except Exception as e:
    m = f"Invalid cryptographic key file {KEY_FILE}\n         {str(e)}\n\n" 
@@ -153,71 +171,33 @@ except Exception as e:
 
 # Either encrypt or decrypt the source file using the cryptographic component 
 if ENCRYPT:
-    pass
+    OUTPUT_FILE = f"{SOURCE_FILE}.{EXTENSION}"
+    if VERBOSE: 
+       m = f"   -- Encrypting {SOURCE_FILE} with {KEY_FILE}, saving outout to {OUTPUT_FILE}"
+       write_message(m)
+    try:
+       with open(SOURCE_FILE, 'rb') as file: clear_text = file.read()     
+       encrypted = cryptographic_component.encrypt(clear_text)
+       with open(OUTPUT_FILE, 'wb') as encrypted_file: encrypted_file.write(encrypted)
+       if not os.path.isfile(OUTPUT_FILE): raise ValueError(f"Output file {OUTPUT_FILE} not created") 
+       if VERBOSE: 
+          m = f"   -- Successfully generated encrypted file {OUTPUT_FILE}"
+          write_message(m)
+    except Exception as e:
+       m = f"Unable to create encrypted file.\n         {str(e)}\n\n" 
+       write_message(m , 'error') 
+       sys.exit(8)
 else: # Decrypt
-    pass 
+    if VERBOSE:
+       m = f"   -- Decrypting {SOURCE_FILE} with {KEY_FILE}, writing results to standard out"
+       write_message(m)
+    try:
+       with open(SOURCE_FILE, 'rb') as enc_file: encrypted = enc_file.read()
+       clear_text = cryptographic_component.decrypt(encrypted).decode()
+       print(clear_text)
+    except Exception as e:
+       m = f"Unable to create decrypted {SOURCE_FILE} with {KEY_FILE}.\n         {str(e)}\n\n" 
+       write_message(m , 'error') 
+       sys.exit(9)
 
 sys.exit(0)
-
-# Generate a random key
-if VERBOSE: write_message("   -- Generating key ...")
-# this just calls: base64.urlsafe_b64encode(os.urandom(32))
-key = Fernet.generate_key()
-
-# Try to write key to file
-try:
-   if VERBOSE: write_message(f"   -- Writing key file {KEY_FILE}  ...")
-   with open(KEY_FILE, 'wb') as filekey: filekey.write(key)
-except Exception as e:
-   m = f"Unable to write key to file: {KEY_FILE}"
-   write_message(m, "error")
-   sys.exit(4)
-
-# Verify key file
-if VERBOSE: write_message(f"   -- Verifying key file '{KEY_FILE}'")
-with open(KEY_FILE, 'rb') as filekey: test_key = filekey.read()
-fernet = Fernet(test_key)
-test_string = """
-So, so you think you can tell
-Heaven from Hell,
-Blue skys from pain.
-Can you tell a green field
-From a cold steel rail?
-A smile from a veil?
-Do you think you can tell?
-
-And did they get you to trade
-Your heros for ghosts?
-Hot ashes for trees?
-Hot air for a cool breeze?
-Cold comfort for change?
-And did you exchange
-A walk on part in the war
-For a lead role in a cage?
-
-How I wish, how I wish you were here.
-We're just two lost souls
-Swimming in a fish bowl,
-Year after year,
-Running over the same old ground.
-What have we found?
-The same old fears.
-Wish you were here.
-"""
-
-if DEBUG: print(test_string)
-encrypted_string = fernet.encrypt(test_string.encode())
-if DEBUG: print(encrypted_string)
-decrypted_string = fernet.decrypt(encrypted_string).decode()
-if DEBUG: print(decrypted_string)
-if decrypted_string == test_string:
-   if VERBOSE: write_message(f"   -- Successfully verified key file '{KEY_FILE}'")
-   exit_code = 0
-else:
-   m = f"Key file '{KEY_FILE}' FAILED validation, removing filels."
-   write_message(m, "error")
-   os.remove(KEY_FILE)
-   exit_code = 2
-
-if VERBOSE: write_message("Task Complete.")
-sys.exit(exit_code)
