@@ -1,3 +1,12 @@
+# 
+# This library holds some common functionality like reading and writing 
+# flat text config file and reading and writing JSON files that support 
+# both a clear text implementation and an encryption implementation.
+# To access encrypt or decrypt functionality, just call the same method 
+# you would normally call but, add a key file argument.  
+# 
+# To execute the unit tests simply run this libray as a main program.
+# -- H. Wilson, July 2022
 
 import os
 import sys
@@ -105,9 +114,9 @@ def setup(request):
    request.cls.config_file     = config_file      #  /
    request.cls.enc_config_file = enc_config_file  # /
    with open(key_file, 'wb') as filekey: filekey.write(key)
-   # Execure the test cases 
+   # Execute test cases 
    yield  
-   # test Takedown: Clean up any left over files
+   # Test Takedown: Clean up any left over files
    if os.path.isfile(key_file):        os.remove(key_file) 
    if os.path.isfile(config_file):     os.remove(config_file)
    if os.path.isfile(enc_config_file): os.remove(enc_config_file)
