@@ -125,7 +125,7 @@ def read_config_file(config_file, key_file=None, delimiter=' '):
             if len(data_elements) != 2: 
                sys.stderr.write(f"{WARNING} -- Invalid line in {config_file} line {line_count}\n'{line}'\n")
                sys.stderr.flush()
-            configs[data_elements[0]] = str(data_elements[-1])    
+            configs[data_elements[0]] = str(data_elements[-1]).strip()    
    except Exception as e: 
       sys.stderr.write(f"{ERROR} -- \n{str(e)}\n")
       sys.stderr.flush()
